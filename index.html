@@ -1017,7 +1017,7 @@
           <div class="panel-header">
             <div class="panel-header-left">
               <h2>Your Library</h2>
-              <span>Everything here is stored offline on this device.</span>
+              <span>Everything here is stored offline on this device (text fully, manga metadata only).</span>
             </div>
             <div class="pill-toggle" id="typeFilter">
               <button data-type="all" class="active">All</button>
@@ -1047,7 +1047,7 @@
             <button class="btn-ghost" id="clearEditorBtn">Reset</button>
           </div>
           <div class="side-note">
-            Leaf Reader is fully offline. When you add text, images, PDFs or archives, they’re saved in your browser storage so you can read them even without internet.
+            Text stories are saved completely. Manga files (images/PDF/CBZ/CBR) stay in this tab’s memory to avoid crashes. After a full refresh, re-add the files if needed.
           </div>
 
           <div class="editor-section">
@@ -1112,7 +1112,7 @@
               <div class="field" id="mangaImagesField" style="display:none;">
                 <label>For Manga: Image Folder</label>
                 <input type="file" id="mangaFolderInput" webkitdirectory multiple />
-                <small>Any image names & formats are fine (png, jpg, etc). If filenames have numbers like 001, 002, 003 they’re used to sort pages.</small>
+                <small>Any image names & formats are fine (png, jpg, etc). Numbers like 001, 002 are used for sorting if present.</small>
               </div>
               <div class="field" id="mangaPdfField" style="display:none;">
                 <label>For Manga: PDF File</label>
@@ -1123,7 +1123,7 @@
                 <label>For Manga: CBZ / CBR</label>
                 <input type="file" id="mangaArchiveInput"
                   accept=".cbz,.cbr,application/x-cbz,application/x-cbr,application/x-rar-compressed,application/x-zip-compressed" />
-                <small>Stored offline. Leaf Reader lets you download/open it in your own CBZ/CBR reader.</small>
+                <small>Stored in memory for this session. Download and open in your CBZ/CBR reader from the reader side panel.</small>
               </div>
             </div>
 
@@ -1253,7 +1253,11 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "leafReaderData_v1";
+    // --- Storage and runtime separation ---
+    const STORAGE_KEY = "leafReaderData_safe_v1";
+
+    // Big manga files live here only in memory (not in localStorage)
+    let mangaRuntime = {}; // { [bookId]: { images?:[], pdfDataUrl?:string, archive?:{name,dataUrl} } }
 
     function loadState() {
       try {
@@ -1261,6 +1265,13 @@
         if (!raw) return { books: [], createdAt: Date.now() };
         const parsed = JSON.parse(raw);
         if (!Array.isArray(parsed.books)) parsed.books = [];
+        // Ensure books have the fields we expect
+        parsed.books = parsed.books.map(b => ({
+          ...b,
+          stats: b.stats || { views: 0, likes: 0, liked: false },
+          comments: b.comments || [],
+          tags: b.tags || []
+        }));
         return parsed;
       } catch (e) {
         console.error("Failed to parse state", e);
@@ -1268,9 +1279,20 @@
       }
     }
 
+    function getPersistableState() {
+      // Strip heavy runtime fields before saving
+      return {
+        createdAt: appState.createdAt || Date.now(),
+        books: appState.books.map(b => {
+          const { images, pdfDataUrl, archive, ...rest } = b;
+          return rest;
+        })
+      };
+    }
+
     function saveState() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(getPersistableState()));
       } catch (e) {
         console.error("Failed to save state", e);
         alert("Could not save to local storage. Your browser may be out of space.");
@@ -1289,6 +1311,7 @@
     let readerPageIndex = 0;
     let readerHasCountedView = false;
 
+    // --- DOM refs ---
     const searchInput = document.getElementById("searchInput");
     const libraryContent = document.getElementById("libraryContent");
     const typeFilterEl = document.getElementById("typeFilter");
@@ -1643,9 +1666,9 @@
       const mangaSource = getMangaSourceType();
 
       let pages = [];
-      let images = [];
-      let pdfDataUrl = null;
-      let archive = null;
+      let runtimeImages = [];
+      let runtimePdf = null;
+      let runtimeArchive = null;
 
       let thumbDataUrl = null;
       if (thumbInput.files && thumbInput.files[0]) {
@@ -1672,7 +1695,7 @@
           });
           for (const file of imageFiles) {
             const dataUrl = await fileToDataUrl(file);
-            images.push({ name: file.name, dataUrl });
+            runtimeImages.push({ name: file.name, dataUrl });
           }
         } else if (mangaSource === "pdf") {
           const file = mangaPdfInput.files[0];
@@ -1680,7 +1703,7 @@
             alert("Please select a PDF file for manga.");
             return;
           }
-          pdfDataUrl = await fileToDataUrl(file);
+          runtimePdf = await fileToDataUrl(file);
         } else if (mangaSource === "archive") {
           const file = mangaArchiveInput.files[0];
           if (!file) {
@@ -1688,10 +1711,9 @@
             return;
           }
           const dataUrl = await fileToDataUrl(file);
-          archive = { name: file.name, dataUrl };
+          runtimeArchive = { name: file.name, dataUrl };
         }
       } else {
-        // TEXT BOOK
         if (mode === "txt") {
           const file = txtFileInput.files[0];
           if (!file) {
@@ -1722,15 +1744,15 @@
       const volumeNumber = volumeNumberInput.value ? parseInt(volumeNumberInput.value, 10) : null;
 
       const timestamp = Date.now();
-      let book;
+      let bookIdToUse = editingBookId || ("book_" + Math.random().toString(36).slice(2));
 
       if (editingBookId) {
         const idx = appState.books.findIndex(b => b.id === editingBookId);
         if (idx === -1) {
-          editingBookId = null;
           alert("Book not found; creating a new one instead.");
+          editingBookId = null;
         } else {
-          book = appState.books[idx];
+          const book = appState.books[idx];
           book.title = title;
           book.type = type;
           book.author = author;
@@ -1740,19 +1762,27 @@
           book.seriesName = seriesName || null;
           book.volumeNumber = volumeNumber;
           if (thumbDataUrl) book.thumbnail = thumbDataUrl;
+
           if (type === "manga") {
             book.mangaSource = mangaSource;
-            book.images = mangaSource === "images" ? images : [];
-            book.pdfDataUrl = mangaSource === "pdf" ? pdfDataUrl : null;
-            book.archive = mangaSource === "archive" ? archive : null;
+            book.hasMangaImages = mangaSource === "images" && runtimeImages.length > 0;
+            book.hasMangaPdf = mangaSource === "pdf" && !!runtimePdf;
+            book.hasMangaArchive = mangaSource === "archive" && !!runtimeArchive;
             book.pages = [];
+            // update runtime cache
+            mangaRuntime[book.id] = {
+              images: runtimeImages.length ? runtimeImages : (mangaRuntime[book.id]?.images || []),
+              pdfDataUrl: runtimePdf || mangaRuntime[book.id]?.pdfDataUrl || null,
+              archive: runtimeArchive || mangaRuntime[book.id]?.archive || null
+            };
           } else {
             book.mangaSource = null;
+            book.hasMangaImages = false;
+            book.hasMangaPdf = false;
+            book.hasMangaArchive = false;
             book.pages = pages;
-            book.images = [];
-            book.pdfDataUrl = null;
-            book.archive = null;
           }
+
           book.updatedAt = timestamp;
           updateTagsForBook(book);
           saveState();
@@ -1764,7 +1794,7 @@
       }
 
       const newBook = {
-        id: "book_" + Math.random().toString(36).slice(2),
+        id: bookIdToUse,
         title,
         type,
         author,
@@ -1776,15 +1806,24 @@
         thumbnail: thumbDataUrl,
         pages: type === "text" ? pages : [],
         mangaSource: type === "manga" ? mangaSource : null,
-        images: type === "manga" && mangaSource === "images" ? images : [],
-        pdfDataUrl: type === "manga" && mangaSource === "pdf" ? pdfDataUrl : null,
-        archive: type === "manga" && mangaSource === "archive" ? archive : null,
+        hasMangaImages: type === "manga" && mangaSource === "images" && runtimeImages.length > 0,
+        hasMangaPdf: type === "manga" && mangaSource === "pdf" && !!runtimePdf,
+        hasMangaArchive: type === "manga" && mangaSource === "archive" && !!runtimeArchive,
         stats: { views: 0, likes: 0, liked: false },
         comments: [],
         tags: [],
         createdAt: timestamp,
         updatedAt: timestamp
       };
+
+      if (type === "manga") {
+        mangaRuntime[newBook.id] = {
+          images: runtimeImages,
+          pdfDataUrl: runtimePdf,
+          archive: runtimeArchive
+        };
+      }
+
       updateTagsForBook(newBook);
       appState.books.unshift(newBook);
       saveState();
@@ -1829,10 +1868,10 @@
 
       if (book.type === "manga") {
         tags.add("Manga");
-        const source = book.mangaSource || "images";
-        if (source === "images") tags.add("Image Manga");
-        if (source === "pdf") tags.add("PDF Manga");
-        if (source === "archive") tags.add("CBZ/CBR");
+        const src = book.mangaSource || "images";
+        if (src === "images") tags.add("Image Manga");
+        if (src === "pdf") tags.add("PDF Manga");
+        if (src === "archive") tags.add("CBZ/CBR");
       } else {
         tags.add("Text");
       }
@@ -2024,13 +2063,13 @@
         updatePageList();
         renderCurrentPageToEditor();
       } else {
-        editorPages = ["<p>(Manga pages are defined by images/PDF/archive settings.)</p>"];
+        editorPages = ["<p>(Manga pages are defined by images/PDF/archive settings. Re-add files if needed.)</p>"];
         currentPageIndex = 0;
         updatePageList();
         renderCurrentPageToEditor();
       }
 
-      setEditorStatus("Editing existing book.");
+      setEditorStatus("Editing existing book. For manga, re-select files if you want to update them.");
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
 
@@ -2099,20 +2138,29 @@
       readerExtra.innerHTML = "";
       if (book.type !== "manga") return;
       const src = book.mangaSource || "images";
+      const runtime = mangaRuntime[book.id];
+
+      if (!runtime) {
+        readerExtra.textContent = "Manga files are not loaded in this session. Re-open the editor and re-add the folder/PDF/CBZ file if you want to read it.";
+        return;
+      }
+
       if (src === "pdf") {
         readerExtra.textContent = "PDF-based manga. Use your browser's PDF controls (zoom, page jump, download).";
-      } else if (src === "archive" && book.archive) {
+      } else if (src === "archive" && runtime.archive) {
         const info = document.createElement("div");
-        info.textContent = "This manga is stored as a CBZ/CBR archive.";
+        info.textContent = "This manga is stored as a CBZ/CBR archive in memory for this session.";
         const link = document.createElement("a");
-        link.href = book.archive.dataUrl;
-        link.download = book.archive.name || "manga.cbz";
+        link.href = runtime.archive.dataUrl;
+        link.download = runtime.archive.name || "manga.cbz";
         link.textContent = "Download archive and open in your CBZ/CBR reader.";
         const p = document.createElement("div");
         p.appendChild(info);
         p.appendChild(document.createElement("br"));
         p.appendChild(link);
         readerExtra.appendChild(p);
+      } else if (src === "images") {
+        readerExtra.textContent = "Image-based manga. Swipe with arrow keys or buttons to change pages.";
       }
     }
 
@@ -2121,16 +2169,26 @@
       if (!book) return;
       const isManga = book.type === "manga";
       const src = book.mangaSource || "images";
+      const runtime = mangaRuntime[book.id];
 
       let totalPages = 1;
       if (!isManga) {
         totalPages = book.pages?.length || 1;
       } else if (src === "images") {
-        totalPages = book.images?.length || 1;
+        totalPages = runtime?.images?.length || 0;
+        if (totalPages === 0) {
+          readerTextPage.style.display = "block";
+          readerMangaPage.style.display = "none";
+          readerPdfPage.style.display = "none";
+          readerNavButtons.style.display = "none";
+          readerTextPage.innerHTML = "<p>Manga images not available in this session. Re-open the editor and re-add the image folder.</p>";
+          readerPageIndicator.textContent = "No pages";
+          return;
+        }
       } else if (src === "pdf") {
-        totalPages = 1; // entire PDF shown, let viewer handle pages
+        totalPages = 1;
       } else if (src === "archive") {
-        totalPages = 1; // external reader
+        totalPages = 1;
       }
 
       if (readerPageIndex < 0) readerPageIndex = 0;
@@ -2155,7 +2213,7 @@
           readerTextPage.style.display = "none";
           readerPdfPage.style.display = "none";
           readerMangaPage.style.display = "flex";
-          const page = book.images[readerPageIndex];
+          const page = runtime.images[readerPageIndex];
           readerMangaImg.src = page ? page.dataUrl : "";
           readerPageIndicator.textContent = `Page ${readerPageIndex + 1} / ${totalPages}`;
           if (withAnimation) {
@@ -2167,15 +2225,26 @@
           readerNavButtons.style.display = "none";
           readerTextPage.style.display = "none";
           readerMangaPage.style.display = "none";
-          readerPdfPage.style.display = "flex";
-          readerPdfEmbed.src = book.pdfDataUrl || "";
-          readerPageIndicator.textContent = `PDF viewer`;
+          if (!runtime || !runtime.pdfDataUrl) {
+            readerPdfPage.style.display = "none";
+            readerTextPage.style.display = "block";
+            readerTextPage.innerHTML = "<p>PDF not loaded in this session. Re-open the editor and re-add the PDF file.</p>";
+            readerPageIndicator.textContent = "PDF not loaded";
+          } else {
+            readerPdfPage.style.display = "flex";
+            readerPdfEmbed.src = runtime.pdfDataUrl;
+            readerPageIndicator.textContent = `PDF viewer`;
+          }
         } else if (src === "archive") {
           readerNavButtons.style.display = "none";
           readerMangaPage.style.display = "none";
           readerPdfPage.style.display = "none";
           readerTextPage.style.display = "block";
-          readerTextPage.innerHTML = "<p>This manga is stored as a CBZ/CBR archive. Use the download link on the right to open it in your preferred reader.</p>";
+          if (!runtime || !runtime.archive) {
+            readerTextPage.innerHTML = "<p>CBZ/CBR file not loaded in this session. Re-open the editor and re-add the archive file.</p>";
+          } else {
+            readerTextPage.innerHTML = "<p>This manga is stored as a CBZ/CBR archive. Use the download link on the right to open it in your preferred reader.</p>";
+          }
           readerPageIndicator.textContent = `Archive`;
         }
       }
