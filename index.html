@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leaf Reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-soft: #0b1020;
+      --panel: #111827;
+      --panel-soft: #151b2c;
+      --accent: #7cffb2;
+      --accent-soft: rgba(124, 255, 178, 0.1);
+      --accent-2: #60a5fa;
+      --text: #e5ecff;
+      --muted: #94a3b8;
+      --danger: #fb7185;
+      --radius: 18px;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background:
+        radial-gradient(900px 900px at 0% 0%, #1e293b 0%, transparent 55%),
+        radial-gradient(900px 900px at 100% 0%, #020617 0%, transparent 55%),
+        radial-gradient(1200px 1000px at 50% 100%, #020617 0%, #020617 60%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 16px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header.app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.15) 0, transparent 55%),
+                  linear-gradient(120deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.8);
+      position: sticky;
+      top: 8px;
+      z-index: 5;
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: conic-gradient(from 180deg, #22c55e, #22c55e, #22d3ee, #22c55e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9), 0 12px 30px rgba(16, 185, 129, 0.5);
+      animation: floatPulse 4s ease-in-out infinite;
+    }
+    .brand-logo span {
+      font-size: 18px;
+      font-weight: 800;
+      color: #020617;
+    }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-text h1 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .brand-text span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-box {
+      position: relative;
+      flex: 1 1 auto;
+      max-width: 230px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 7px 32px 7px 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s, background 0.2s, transform 0.1s;
+    }
+    .search-box input::placeholder {
+      color: rgba(148, 163, 184, 0.7);
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(124, 255, 178, 0.35);
+      background: rgba(15, 23, 42, 0.95);
+      transform: translateY(-0.5px);
+    }
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      background: linear-gradient(120deg, #22c55e, #22d3ee);
+      color: #020617;
+      box-shadow: 0 12px 35px rgba(34, 197, 94, 0.45);
+      transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, filter 0.12s;
+    }
+    .btn span.icon {
+      font-size: 16px;
+    }
+    .btn:hover {
+      transform: translateY(-1px) scale(1.01);
+      filter: brightness(1.05);
+      box-shadow: 0 18px 40px rgba(34, 197, 94, 0.6);
+    }
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.7);
+    }
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: none;
+    }
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.5);
+      filter: none;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.1fr);
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .library-panel {
+      background: radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.08) 0, transparent 55%),
+                  linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      border-radius: 24px;
+      padding: 16px 16px 18px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .library-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(450px 450px at 110% 0%, rgba(56, 189, 248, 0.16), transparent 55%),
+        radial-gradient(520px 520px at -10% 100%, rgba(45, 212, 191, 0.16), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .library-panel-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .panel-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .panel-header-left h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .panel-header-left span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .pill-toggle {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      gap: 3px;
+    }
+    .pill-toggle button {
+      border-radius: 999px;
+      border: none;
+      padding: 4px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: background 0.16s, color 0.16s, transform 0.1s;
+    }
+    .pill-toggle button.active {
+      background: rgba(124, 255, 178, 0.15);
+      color: var(--accent);
+      transform: translateY(-0.5px);
+    }
+
+    .library-empty {
+      border-radius: 18px;
+      padding: 22px 16px;
+      background: radial-gradient(circle at 0% 0%, rgba(15, 23, 42, 0.9) 0, rgba(15, 23, 42, 0.92) 50%, rgba(15, 23, 42, 0.94) 100%);
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-top: 4px;
+      animation: subtlePop 0.4s ease-out;
+    }
+    .library-empty-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      background: radial-gradient(circle at 20% 0%, rgba(96, 165, 250, 0.35), transparent 55%);
+    }
+    .library-empty-text h3 {
+      margin: 0 0 4px;
+      font-size: 14px;
+    }
+    .library-empty-text p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+      max-height: 440px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .book-card {
+      position: relative;
+      border-radius: 18px;
+      background: radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.15), transparent 55%),
+                  linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.98));
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, border 0.16s;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.7);
+      overflow: hidden;
+    }
+    .book-card:hover {
+      transform: translateY(-3px) scale(1.01);
+      border-color: rgba(124, 255, 178, 0.6);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+    }
+    .book-thumb {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.4), transparent 60%), #020617;
+      padding-top: 135%;
+    }
+    .book-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform-origin: center;
+      transition: transform 0.25s ease-out;
+    }
+    .book-card:hover .book-thumb img {
+      transform: scale(1.05);
+    }
+    .book-type-pill {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      font-size: 9px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--muted);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .book-tags {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+    .tag-chip {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      backdrop-filter: blur(10px);
+    }
+    .book-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .book-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .book-sub {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .book-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      align-items: center;
+    }
+    .book-stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(30, 64, 175, 0.7);
+    }
+    .book-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .book-actions button {
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      transition: background 0.16s, transform 0.12s, color 0.16s;
+    }
+    .book-actions button:hover {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .side-panel {
+      background: linear-gradient(150deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+      border-radius: 24px;
+      padding: 14px 14px 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(15, 23, 42, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+    .side-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(360px 360px at 0% 0%, rgba(96, 165, 250, 0.25), transparent 60%),
+        radial-gradient(380px 380px at 100% 100%, rgba(34, 197, 94, 0.25), transparent 60%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .side-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+    }
+    .side-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .side-header h2 {
+      margin: 0;
+      font-size: 14px;
+    }
+    .side-header span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .side-note {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .editor-section {
+      border-radius: 16px;
+      background: radial-gradient(circle at 0% 0%, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.97));
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-height: 220px;
+    }
+
+    .editor-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .editor-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+    .editor-type-toggle {
+      display: inline-flex;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      padding: 2px;
+      gap: 2px;
+    }
+    .editor-type-toggle button {
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      padding: 4px 7px;
+      font-size: 10px;
+      cursor: pointer;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .editor-type-toggle button.active {
+      background: rgba(124, 255, 178, 0.2);
+      color: var(--accent);
+    }
+
+    .editor-modes {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+    .editor-modes button {
+      border-radius: 999px;
+      border: none;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 4px 9px;
+      cursor: pointer;
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .editor-modes button.active {
+      background: rgba(37, 99, 235, 0.4);
+      color: var(--text);
+      border-color: rgba(96, 165, 250, 0.8);
+    }
+
+    .editor-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .field label {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      font-size: 11px;
+      padding: 6px 10px;
+      outline: none;
+      transition: border 0.16s, box-shadow 0.16s, background 0.16s;
+    }
+    .field textarea {
+      border-radius: 12px;
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+    }
+    .field input::placeholder,
+    .field textarea::placeholder {
+      color: rgba(148, 163, 184, 0.7);
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(124, 255, 178, 0.35);
+      background: rgba(15, 23, 42, 0.97);
+    }
+    .field-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .field small {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .editor-page-wrapper {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      height: 180px;
+    }
+    .page-list {
+      width: 90px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(30, 64, 175, 0.8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .page-list-header {
+      padding: 4px 6px;
+      font-size: 10px;
+      border-bottom: 1px solid rgba(30, 64, 175, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-items {
+      flex: 1;
+      overflow: auto;
+    }
+    .page-item {
+      padding: 4px 6px;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 4px;
+      border-bottom: 1px dashed rgba(30, 64, 175, 0.4);
+      transition: background 0.12s;
+    }
+    .page-item span {
+      white-space: nowrap;
+    }
+    .page-item.active {
+      background: rgba(37, 99, 235, 0.5);
+      color: var(--text);
+    }
+    .page-item button {
+      border: none;
+      background: transparent;
+      color: rgba(248, 250, 252, 0.7);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .page-editor {
+      flex: 1;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .page-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.95);
+      background: radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.3), transparent 55%);
+    }
+    .page-toolbar button {
+      border-radius: 999px;
+      border: none;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      padding: 4px 7px;
+      font-size: 11px;
+      cursor: pointer;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .page-toolbar button:hover {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+    }
+    .page-toolbar select {
+      font-size: 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--muted);
+      padding: 2px 6px;
+      outline: none;
+    }
+
+    .page-content {
+      flex: 1;
+      padding: 8px 10px;
+      font-size: 14px;
+      overflow: auto;
+      line-height: 1.6;
+      outline: none;
+      scroll-behavior: smooth;
+    }
+    .page-content.page-fade {
+      animation: pageFade 0.25s ease-out;
+    }
+
+    .side-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .side-footer small {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .reader-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.7), rgba(2, 6, 23, 0.96));
+      backdrop-filter: blur(18px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      z-index: 30;
+    }
+    .reader-overlay.visible {
+      display: flex;
+      animation: overlayIn 0.25s ease-out;
+    }
+    .reader-shell {
+      max-width: 1024px;
+      width: 100%;
+      max-height: 90vh;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #020617, #020617);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.1fr);
+      overflow: hidden;
+      border: 1px solid rgba(30, 64, 175, 0.9);
+    }
+    .reader-main {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-right: 1px solid rgba(15, 23, 42, 0.95);
+    }
+    .reader-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .reader-title-block h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .reader-title-block span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .reader-controls {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .reader-page-indicator {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(30, 64, 175, 0.8);
+    }
+    .reader-buttons button {
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      padding: 5px 9px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      font-size: 11px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+    .reader-buttons button:hover {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+    }
+    .reader-page {
+      flex: 1;
+      border-radius: 12px;
+      background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 1));
+      border: 1px solid rgba(15, 23, 42, 0.9);
+      padding: 10px 14px;
+      overflow: auto;
+    }
+    .reader-page-inner {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .reader-page-inner.page-fade {
+      animation: pageFade 0.25s ease-out;
+    }
+
+    .reader-manga-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-height: 64vh;
+    }
+    .reader-manga-page img {
+      max-width: 100%;
+      max-height: 62vh;
+      border-radius: 14px;
+      border: 1px solid rgba(30, 64, 175, 0.9);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 1);
+    }
+
+    .reader-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .reader-side {
+      padding: 14px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: radial-gradient(circle at 0% 0%, rgba(30, 64, 175, 0.7), rgba(15, 23, 42, 0.98));
+    }
+    .reader-side h3 {
+      margin: 0;
+      font-size: 13px;
+    }
+    .reader-stat-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+    .reader-stat-pill {
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .like-button {
+      border-radius: 999px;
+      border: none;
+      padding: 5px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      transition: transform 0.12s, background 0.16s, color 0.16s, box-shadow 0.16s;
+    }
+    .like-button.liked {
+      background: radial-gradient(circle at 0% 0%, rgba(248, 113, 113, 0.6), transparent 45%),
+                  linear-gradient(135deg, #fecaca, #fb7185);
+      color: #020617;
+      border-color: rgba(252, 165, 165, 0.9);
+      box-shadow: 0 14px 28px rgba(248, 113, 113, 0.65);
+    }
+    .like-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .comment-list {
+      flex: 1;
+      overflow: auto;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(15, 23, 42, 0.9);
+      padding: 6px;
+      font-size: 11px;
+    }
+    .comment-item {
+      padding: 6px 6px 6px 8px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(30, 64, 175, 0.75);
+      margin-bottom: 4px;
+      animation: subtlePop 0.3s ease-out;
+    }
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      margin-bottom: 2px;
+      color: var(--muted);
+    }
+    .comment-meta strong {
+      color: var(--accent);
+    }
+    .comment-text {
+      font-size: 11px;
+    }
+
+    .comment-form {
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .comment-form-row {
+      display: flex;
+      gap: 4px;
+    }
+    .comment-form input,
+    .comment-form textarea {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.97);
+      color: var(--text);
+      font-size: 11px;
+      padding: 5px 8px;
+      outline: none;
+    }
+    .comment-form textarea {
+      border-radius: 10px;
+      resize: vertical;
+      min-height: 40px;
+    }
+    .comment-form input::placeholder,
+    .comment-form textarea::placeholder {
+      color: rgba(148, 163, 184, 0.7);
+    }
+    .comment-form input:focus,
+    .comment-form textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(124, 255, 178, 0.4);
+    }
+
+    .reader-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      border-radius: 999px;
+      border: none;
+      width: 26px;
+      height: 26px;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--muted);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .reader-close-btn:hover {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+    }
+
+    @keyframes floatPulse {
+      0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 12px 26px rgba(16, 185, 129, 0.6); }
+      50% { transform: translateY(-2px) scale(1.04); box-shadow: 0 18px 40px rgba(16, 185, 129, 0.8); }
+    }
+    @keyframes subtlePop {
+      0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes pageFade {
+      0% { opacity: 0; transform: translateX(6px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes overlayIn {
+      0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 880px) {
+      header.app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        border-radius: 20px;
+      }
+      .header-actions {
+        width: 100%;
+      }
+      .search-box {
+        max-width: none;
+        flex: 1;
+      }
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .reader-shell {
+        grid-template-columns: minmax(0, 1fr);
+        max-height: 92vh;
+      }
+      .reader-main {
+        border-right: none;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.95);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .app-shell {
+        padding: 12px 10px 24px;
+      }
+      .library-panel,
+      .side-panel {
+        border-radius: 18px;
+      }
+      .book-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .reader-shell {
+        border-radius: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <span>🍃</span>
+        </div>
+        <div class="brand-text">
+          <h1>Leaf Reader</h1>
+          <span>Offline stories, manga & volumes</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Search by title, author, series, tag..." />
+        </div>
+        <button class="btn" id="addBookBtn">
+          <span class="icon">➕</span>
+          <span>Add Book</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="library-panel">
+        <div class="library-panel-inner">
+          <div class="panel-header">
+            <div class="panel-header-left">
+              <h2>Your Library</h2>
+              <span>Everything here is stored offline on this device.</span>
+            </div>
+            <div class="pill-toggle" id="typeFilter">
+              <button data-type="all" class="active">All</button>
+              <button data-type="text">Text</button>
+              <button data-type="manga">Manga</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span>Sort:</span>
+            <div class="pill-toggle" id="sortToggle">
+              <button data-sort="recent" class="active">Recent</button>
+              <button data-sort="views">Views</button>
+              <button data-sort="likes">Likes</button>
+            </div>
+          </div>
+          <div id="libraryContent"></div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="side-inner">
+          <div class="side-header">
+            <div>
+              <h2>New Book / Edit</h2>
+              <span>Create volumes, manga, and stories page by page.</span>
+            </div>
+            <button class="btn-ghost" id="clearEditorBtn">Reset</button>
+          </div>
+          <div class="side-note">
+            Leaf Reader is fully offline. When you add text or images, they’re saved in your browser storage so you can read them even without internet.
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-row">
+              <span class="editor-label">Book Type</span>
+              <div class="editor-type-toggle" id="bookTypeToggle">
+                <button data-type="text" class="active">Story / Text</button>
+                <button data-type="manga">Manga / Comic</button>
+              </div>
+            </div>
+
+            <div class="editor-row">
+              <span class="editor-label">Input Mode</span>
+              <div class="editor-modes" id="inputModeToggle">
+                <button data-mode="txt" class="active">1. Insert .txt</button>
+                <button data-mode="html">2. Paste HTML</button>
+                <button data-mode="editor">3. Built-in Editor</button>
+              </div>
+            </div>
+
+            <div class="editor-fields">
+              <div class="field">
+                <label>Title *</label>
+                <input type="text" id="bookTitle" placeholder="My First Leaf Story" />
+              </div>
+              <div class="field">
+                <label>Original Author</label>
+                <input type="text" id="bookAuthor" placeholder="Your name or pen name" />
+              </div>
+              <div class="field">
+                <label>Publisher</label>
+                <input type="text" id="bookPublisher" placeholder="Optional publisher name" />
+              </div>
+              <div class="field">
+                <label>Published Date</label>
+                <input type="date" id="bookPubDate" />
+              </div>
+              <div class="field">
+                <label>Copyright / Studio</label>
+                <input type="text" id="bookCopyright" placeholder="© 2025 Leaf Studio" />
+              </div>
+              <div class="field">
+                <label>Series / Volume</label>
+                <div class="field-row">
+                  <input type="text" id="seriesName" placeholder="Series name (optional)" />
+                  <input type="number" id="volumeNumber" placeholder="Vol." min="1" style="max-width:70px;" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Thumbnail</label>
+                <input type="file" id="thumbInput" accept="image/*" />
+              </div>
+              <div class="field">
+                <label>For Manga: Image Folder</label>
+                <input type="file" id="mangaFolderInput" webkitdirectory multiple />
+                <small>Use 001, 002, 003... filenames. Sorted automatically.</small>
+              </div>
+            </div>
+
+            <div id="inputModeAreas">
+              <div id="txtArea" class="field">
+                <label>.txt File</label>
+                <input type="file" id="txtFileInput" accept=".txt" />
+                <small>Text is split into pages automatically. You can still edit later.</small>
+              </div>
+              <div id="htmlArea" class="field" style="display:none;">
+                <label>HTML Content</label>
+                <textarea id="htmlInput" placeholder="Use &lt;h1&gt;, &lt;h2&gt;, &lt;p&gt; tags only."></textarea>
+              </div>
+            </div>
+
+            <div id="builtInEditor" style="display:none; margin-top:4px;">
+              <div class="editor-label">Pages</div>
+              <div class="editor-page-wrapper">
+                <div class="page-list">
+                  <div class="page-list-header">
+                    <span>Pages</span>
+                    <button id="addPageBtn" style="border:none;background:transparent;color:var(--accent);font-size:14px;cursor:pointer;">＋</button>
+                  </div>
+                  <div class="page-items" id="pageList"></div>
+                </div>
+                <div class="page-editor">
+                  <div class="page-toolbar">
+                    <button type="button" data-cmd="bold"><strong>B</strong></button>
+                    <button type="button" data-cmd="italic"><em>I</em></button>
+                    <select id="fontSelect">
+                      <option value="">Font</option>
+                      <option value="serif">Serif</option>
+                      <option value="system-ui">Sans</option>
+                    </select>
+                    <select id="fontSizeSelect">
+                      <option value="">Size</option>
+                      <option value="14px">14</option>
+                      <option value="16px">16</option>
+                      <option value="18px">18</option>
+                      <option value="22px">22</option>
+                    </select>
+                  </div>
+                  <div id="pageEditorContent" class="page-content" contenteditable="true">
+                    <p>Write your first page here...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="side-footer">
+              <small id="editorStatus">Ready.</small>
+              <button class="btn" id="saveBookBtn">
+                <span class="icon">💾</span>
+                <span>Save Book</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="reader-overlay" id="readerOverlay">
+    <div class="reader-shell">
+      <button class="reader-close-btn" id="readerCloseBtn">✕</button>
+      <div class="reader-main">
+        <div class="reader-header">
+          <div class="reader-title-block">
+            <h2 id="readerTitle"></h2>
+            <span id="readerSub"></span>
+          </div>
+          <div class="reader-controls">
+            <div class="reader-page-indicator" id="readerPageIndicator"></div>
+            <div class="reader-buttons">
+              <button id="prevPageBtn">⟵ Prev</button>
+              <button id="nextPageBtn">Next ⟶</button>
+            </div>
+          </div>
+        </div>
+        <div class="reader-page" id="readerPageContainer">
+          <div class="reader-page-inner" id="readerTextPage"></div>
+          <div class="reader-manga-page" id="readerMangaPage" style="display:none;">
+            <img id="readerMangaImg" alt="Manga page" />
+          </div>
+        </div>
+        <div class="reader-meta" id="readerMeta"></div>
+      </div>
+      <div class="reader-side">
+        <div>
+          <h3>Reactions & Stats</h3>
+          <div class="reader-stat-row">
+            <div class="reader-stat-pill">
+              👁️ <span id="readerViewCount">0</span> views
+            </div>
+            <div class="reader-stat-pill">
+              ❤️ <span id="readerLikeCount">0</span> likes
+            </div>
+          </div>
+          <div style="margin-top:6px;">
+            <button class="like-button" id="readerLikeBtn">
+              <span>🤍</span>
+              <span id="likeBtnLabel">Like this</span>
+            </button>
+          </div>
+          <div class="tags-row" id="readerTags" style="margin-top:6px;"></div>
+        </div>
+        <div style="margin-top:6px;">
+          <h3>Comments</h3>
+          <div class="comment-list" id="commentList"></div>
+          <form class="comment-form" id="commentForm">
+            <div class="comment-form-row">
+              <input type="text" id="commentAuthor" placeholder="Your name (optional)" />
+              <button class="btn" type="submit" style="padding:5px 10px;font-size:11px;">
+                <span>Post</span>
+              </button>
+            </div>
+            <textarea id="commentText" placeholder="Write a short comment after reading..."></textarea>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "leafReaderData_v1";
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { books: [], createdAt: Date.now() };
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.books)) parsed.books = [];
+        return parsed;
+      } catch (e) {
+        console.error("Failed to parse state", e);
+        return { books: [], createdAt: Date.now() };
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.error("Failed to save state", e);
+        alert("Could not save to local storage. Your browser may be out of space.");
+      }
+    }
+
+    let appState = loadState();
+    let currentSort = "recent";
+    let currentTypeFilter = "all";
+    let currentSearch = "";
+    let editingBookId = null;
+    let currentPageIndex = 0;
+    let editorPages = ["<p>Write your first page here...</p>"];
+
+    let readerBookId = null;
+    let readerPageIndex = 0;
+    let readerHasCountedView = false;
+
+    const searchInput = document.getElementById("searchInput");
+    const libraryContent = document.getElementById("libraryContent");
+    const typeFilterEl = document.getElementById("typeFilter");
+    const sortToggleEl = document.getElementById("sortToggle");
+    const addBookBtn = document.getElementById("addBookBtn");
+
+    const bookTypeToggle = document.getElementById("bookTypeToggle");
+    const inputModeToggle = document.getElementById("inputModeToggle");
+    const txtArea = document.getElementById("txtArea");
+    const htmlArea = document.getElementById("htmlArea");
+    const builtInEditor = document.getElementById("builtInEditor");
+
+    const bookTitleInput = document.getElementById("bookTitle");
+    const bookAuthorInput = document.getElementById("bookAuthor");
+    const bookPublisherInput = document.getElementById("bookPublisher");
+    const bookPubDateInput = document.getElementById("bookPubDate");
+    const bookCopyrightInput = document.getElementById("bookCopyright");
+    const seriesNameInput = document.getElementById("seriesName");
+    const volumeNumberInput = document.getElementById("volumeNumber");
+    const thumbInput = document.getElementById("thumbInput");
+    const mangaFolderInput = document.getElementById("mangaFolderInput");
+    const txtFileInput = document.getElementById("txtFileInput");
+    const htmlInput = document.getElementById("htmlInput");
+    const saveBookBtn = document.getElementById("saveBookBtn");
+    const editorStatus = document.getElementById("editorStatus");
+    const clearEditorBtn = document.getElementById("clearEditorBtn");
+
+    const pageListEl = document.getElementById("pageList");
+    const addPageBtn = document.getElementById("addPageBtn");
+    const pageEditorContent = document.getElementById("pageEditorContent");
+    const fontSelect = document.getElementById("fontSelect");
+    const fontSizeSelect = document.getElementById("fontSizeSelect");
+
+    const readerOverlay = document.getElementById("readerOverlay");
+    const readerCloseBtn = document.getElementById("readerCloseBtn");
+    const readerTitle = document.getElementById("readerTitle");
+    const readerSub = document.getElementById("readerSub");
+    const readerPageIndicator = document.getElementById("readerPageIndicator");
+    const prevPageBtn = document.getElementById("prevPageBtn");
+    const nextPageBtn = document.getElementById("nextPageBtn");
+    const readerPageContainer = document.getElementById("readerPageContainer");
+    const readerTextPage = document.getElementById("readerTextPage");
+    const readerMangaPage = document.getElementById("readerMangaPage");
+    const readerMangaImg = document.getElementById("readerMangaImg");
+    const readerMeta = document.getElementById("readerMeta");
+    const readerViewCount = document.getElementById("readerViewCount");
+    const readerLikeCount = document.getElementById("readerLikeCount");
+    const readerLikeBtn = document.getElementById("readerLikeBtn");
+    const likeBtnLabel = document.getElementById("likeBtnLabel");
+    const readerTags = document.getElementById("readerTags");
+    const commentList = document.getElementById("commentList");
+    const commentForm = document.getElementById("commentForm");
+    const commentAuthorInput = document.getElementById("commentAuthor");
+    const commentTextInput = document.getElementById("commentText");
+
+    function setEditorStatus(msg) {
+      editorStatus.textContent = msg;
+    }
+
+    function resetEditor() {
+      editingBookId = null;
+      currentPageIndex = 0;
+      editorPages = ["<p>Write your first page here...</p>"];
+      bookTitleInput.value = "";
+      bookAuthorInput.value = "";
+      bookPublisherInput.value = "";
+      bookPubDateInput.value = "";
+      bookCopyrightInput.value = "";
+      seriesNameInput.value = "";
+      volumeNumberInput.value = "";
+      thumbInput.value = "";
+      mangaFolderInput.value = "";
+      txtFileInput.value = "";
+      htmlInput.value = "";
+      setEditorStatus("Ready.");
+      updatePageList();
+      renderCurrentPageToEditor();
+    }
+
+    function getBookType() {
+      const activeBtn = bookTypeToggle.querySelector("button.active");
+      return activeBtn ? activeBtn.dataset.type : "text";
+    }
+
+    function getInputMode() {
+      const activeBtn = inputModeToggle.querySelector("button.active");
+      return activeBtn ? activeBtn.dataset.mode : "txt";
+    }
+
+    function updateInputModeVisibility() {
+      const mode = getInputMode();
+      txtArea.style.display = mode === "txt" ? "block" : "none";
+      htmlArea.style.display = mode === "html" ? "block" : "none";
+      builtInEditor.style.display = mode === "editor" ? "block" : "none";
+    }
+
+    bookTypeToggle.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        bookTypeToggle.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+        e.target.classList.add("active");
+        setEditorStatus(`Book type set to ${e.target.dataset.type === "text" ? "Story/Text" : "Manga/Comic"}.`);
+      }
+    });
+
+    inputModeToggle.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        inputModeToggle.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+        e.target.classList.add("active");
+        updateInputModeVisibility();
+        setEditorStatus(`Input mode switched to "${e.target.textContent.trim()}".`);
+      }
+    });
+
+    clearEditorBtn.addEventListener("click", () => {
+      if (confirm("Clear the editor and start a fresh book?")) {
+        resetEditor();
+      }
+    });
+
+    function updatePageList() {
+      pageListEl.innerHTML = "";
+      editorPages.forEach((_, idx) => {
+        const div = document.createElement("div");
+        div.className = "page-item" + (idx === currentPageIndex ? " active" : "");
+        const spanLabel = document.createElement("span");
+        spanLabel.textContent = `Page ${idx + 1}`;
+        const btnDel = document.createElement("button");
+        btnDel.type = "button";
+        btnDel.textContent = "✕";
+        btnDel.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          if (editorPages.length === 1) return;
+          editorPages.splice(idx, 1);
+          if (currentPageIndex >= editorPages.length) {
+            currentPageIndex = editorPages.length - 1;
+          }
+          updatePageList();
+          renderCurrentPageToEditor();
+        });
+        div.appendChild(spanLabel);
+        div.appendChild(btnDel);
+        div.addEventListener("click", () => {
+          saveCurrentPageFromEditor();
+          currentPageIndex = idx;
+          updatePageList();
+          renderCurrentPageToEditor(true);
+        });
+        pageListEl.appendChild(div);
+      });
+    }
+
+    function renderCurrentPageToEditor(withAnimation) {
+      const html = editorPages[currentPageIndex] || "<p></p>";
+      pageEditorContent.innerHTML = html;
+      if (withAnimation) {
+        pageEditorContent.classList.remove("page-fade");
+        void pageEditorContent.offsetWidth;
+        pageEditorContent.classList.add("page-fade");
+      }
+    }
+
+    function saveCurrentPageFromEditor() {
+      editorPages[currentPageIndex] = pageEditorContent.innerHTML;
+    }
+
+    addPageBtn.addEventListener("click", () => {
+      saveCurrentPageFromEditor();
+      editorPages.push("<p>New page...</p>");
+      currentPageIndex = editorPages.length - 1;
+      updatePageList();
+      renderCurrentPageToEditor(true);
+    });
+
+    document.querySelectorAll(".page-toolbar button[data-cmd]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const cmd = btn.dataset.cmd;
+        pageEditorContent.focus();
+        document.execCommand(cmd, false, null);
+        saveCurrentPageFromEditor();
+      });
+    });
+
+    fontSelect.addEventListener("change", () => {
+      const value = fontSelect.value;
+      if (!value) return;
+      pageEditorContent.focus();
+      document.execCommand("fontName", false, value === "system-ui" ? "system-ui" : "serif");
+      saveCurrentPageFromEditor();
+      fontSelect.selectedIndex = 0;
+    });
+
+    fontSizeSelect.addEventListener("change", () => {
+      const value = fontSizeSelect.value;
+      if (!value) return;
+      pageEditorContent.focus();
+      document.execCommand("fontSize", false, "4");
+      const fontElements = pageEditorContent.querySelectorAll("font[size='4']");
+      fontElements.forEach(el => {
+        el.removeAttribute("size");
+        el.style.fontSize = value;
+      });
+      saveCurrentPageFromEditor();
+      fontSizeSelect.selectedIndex = 0;
+    });
+
+    pageEditorContent.addEventListener("input", () => {
+      saveCurrentPageFromEditor();
+    });
+
+    searchInput.addEventListener("input", () => {
+      currentSearch = searchInput.value.toLowerCase();
+      renderLibrary();
+    });
+
+    typeFilterEl.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        typeFilterEl.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+        e.target.classList.add("active");
+        currentTypeFilter = e.target.dataset.type;
+        renderLibrary();
+      }
+    });
+
+    sortToggleEl.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        sortToggleEl.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+        e.target.classList.add("active");
+        currentSort = e.target.dataset.sort;
+        renderLibrary();
+      }
+    });
+
+    addBookBtn.addEventListener("click", () => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      setEditorStatus("Scroll down to fill in the book details.");
+    });
+
+    function sanitizeHtml(html) {
+      const allowedTags = ["H1", "H2", "P", "EM", "STRONG", "B", "I", "SPAN", "BR", "DIV", "UL", "OL", "LI"];
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      const walker = document.createTreeWalker(temp, NodeFilter.SHOW_ELEMENT, null);
+      const toRemove = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!allowedTags.includes(node.tagName)) {
+          toRemove.push(node);
+        }
+      }
+      toRemove.forEach(node => {
+        while (node.firstChild) {
+          node.parentNode.insertBefore(node.firstChild, node);
+        }
+        node.parentNode.removeChild(node);
+      });
+      return temp.innerHTML;
+    }
+
+    function autoSplitTextToPages(text) {
+      const paragraphs = text.split(/\n\s*\n/);
+      const pages = [];
+      let currentPage = "";
+      const MAX_CHARS = 1200;
+      paragraphs.forEach(p => {
+        const trimmed = p.trim();
+        if (!trimmed) return;
+        const chunkHtml = "<p>" + trimmed.replace(/\n/g, "<br>") + "</p>";
+        if ((currentPage + chunkHtml).length > MAX_CHARS) {
+          if (currentPage) pages.push(currentPage);
+          currentPage = chunkHtml;
+        } else {
+          currentPage += chunkHtml;
+        }
+      });
+      if (!pages.length && !currentPage) {
+        return ["<p>(Empty page)</p>"];
+      }
+      if (currentPage) pages.push(currentPage);
+      return pages;
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function createOrUpdateBookFromEditor() {
+      const title = bookTitleInput.value.trim();
+      if (!title) {
+        alert("Title is required.");
+        return;
+      }
+      const type = getBookType();
+      const mode = getInputMode();
+
+      let pages = [];
+      let images = [];
+
+      let thumbDataUrl = null;
+
+      if (thumbInput.files && thumbInput.files[0]) {
+        thumbDataUrl = await fileToDataUrl(thumbInput.files[0]);
+      }
+
+      if (type === "manga") {
+        const files = Array.from(mangaFolderInput.files || []);
+        if (!files.length) {
+          alert("For manga/comic books, please select a folder with images.");
+          return;
+        }
+        const imageFiles = files.filter(f => f.type.startsWith("image/"));
+        if (!imageFiles.length) {
+          alert("No image files found in the selected folder.");
+          return;
+        }
+        imageFiles.sort((a, b) => {
+          const getNum = (name) => {
+            const m = name.match(/(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+          };
+          return getNum(a.name) - getNum(b.name);
+        });
+        for (const file of imageFiles) {
+          const dataUrl = await fileToDataUrl(file);
+          images.push({ name: file.name, dataUrl });
+        }
+      } else {
+        if (mode === "txt") {
+          const file = txtFileInput.files[0];
+          if (!file) {
+            alert("Please select a .txt file or switch to another input mode.");
+            return;
+          }
+          const text = await file.text();
+          pages = autoSplitTextToPages(text);
+        } else if (mode === "html") {
+          const raw = htmlInput.value.trim();
+          if (!raw) {
+            alert("Please paste some HTML content.");
+            return;
+          }
+          const safe = sanitizeHtml(raw);
+          pages = [safe];
+        } else if (mode === "editor") {
+          saveCurrentPageFromEditor();
+          pages = editorPages.map(html => sanitizeHtml(html));
+        }
+      }
+
+      const author = bookAuthorInput.value.trim();
+      const publisher = bookPublisherInput.value.trim();
+      const pubDate = bookPubDateInput.value || null;
+      const copyright = bookCopyrightInput.value.trim();
+      const seriesName = seriesNameInput.value.trim();
+      const volumeNumber = volumeNumberInput.value ? parseInt(volumeNumberInput.value, 10) : null;
+
+      let book;
+      const timestamp = Date.now();
+
+      if (editingBookId) {
+        const idx = appState.books.findIndex(b => b.id === editingBookId);
+        if (idx === -1) {
+          editingBookId = null;
+          alert("Book not found; creating a new one instead.");
+        } else {
+          book = appState.books[idx];
+          book.title = title;
+          book.type = type;
+          book.author = author;
+          book.publisher = publisher;
+          book.pubDate = pubDate;
+          book.copyright = copyright;
+          book.seriesName = seriesName || null;
+          book.volumeNumber = volumeNumber;
+          if (thumbDataUrl) book.thumbnail = thumbDataUrl;
+          if (type === "manga") {
+            book.images = images;
+            book.pages = [];
+          } else {
+            book.pages = pages;
+            book.images = [];
+          }
+          book.updatedAt = timestamp;
+          updateTagsForBook(book);
+          saveState();
+          renderLibrary();
+          setEditorStatus("Book updated.");
+          alert("Book updated successfully.");
+          return;
+        }
+      }
+
+      const newBook = {
+        id: "book_" + Math.random().toString(36).slice(2),
+        title,
+        type,
+        author,
+        publisher,
+        pubDate,
+        copyright,
+        seriesName: seriesName || null,
+        volumeNumber,
+        thumbnail: thumbDataUrl,
+        pages: type === "text" ? pages : [],
+        images: type === "manga" ? images : [],
+        stats: {
+          views: 0,
+          likes: 0,
+          liked: false
+        },
+        comments: [],
+        tags: [],
+        createdAt: timestamp,
+        updatedAt: timestamp
+      };
+      updateTagsForBook(newBook);
+      appState.books.unshift(newBook);
+      saveState();
+      renderLibrary();
+      resetEditor();
+      setEditorStatus("Book saved!");
+      alert("Book saved successfully.");
+    }
+
+    saveBookBtn.addEventListener("click", () => {
+      createOrUpdateBookFromEditor();
+    });
+
+    function updateTagsForBook(book) {
+      const tags = new Set(book.tags || []);
+      tags.delete("Popular");
+      tags.delete("Hit");
+      tags.delete("Legendary");
+      tags.delete("Well Liked");
+      tags.delete("Fan Favorite");
+      tags.delete("New");
+
+      const now = Date.now();
+      if (now - (book.createdAt || now) < 7 * 24 * 60 * 60 * 1000) {
+        tags.add("New");
+      }
+
+      const views = book.stats?.views || 0;
+      const likes = book.stats?.likes || 0;
+
+      if (views >= 1000) {
+        tags.add("Legendary");
+      } else if (views >= 100) {
+        tags.add("Popular");
+      } else if (views >= 20) {
+        tags.add("Hit");
+      }
+
+      if (likes >= 100) {
+        tags.add("Fan Favorite");
+      } else if (likes >= 10) {
+        tags.add("Well Liked");
+      }
+
+      if (book.type === "manga") tags.add("Manga");
+      else tags.add("Text");
+
+      book.tags = Array.from(tags);
+    }
+
+    function renderLibrary() {
+      const books = [...appState.books];
+      books.forEach(updateTagsForBook);
+
+      let filtered = books;
+
+      if (currentTypeFilter !== "all") {
+        filtered = filtered.filter(b => b.type === currentTypeFilter);
+      }
+
+      if (currentSearch) {
+        filtered = filtered.filter(b => {
+          const hay = [
+            b.title,
+            b.author,
+            b.seriesName,
+            (b.tags || []).join(" ")
+          ].join(" ").toLowerCase();
+          return hay.includes(currentSearch);
+        });
+      }
+
+      filtered.sort((a, b) => {
+        if (currentSort === "views") {
+          return (b.stats?.views || 0) - (a.stats?.views || 0);
+        }
+        if (currentSort === "likes") {
+          return (b.stats?.likes || 0) - (a.stats?.likes || 0);
+        }
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+
+      if (!filtered.length) {
+        libraryContent.innerHTML = `
+          <div class="library-empty">
+            <div class="library-empty-icon">📭</div>
+            <div class="library-empty-text">
+              <h3>Your library is empty.</h3>
+              <p>Tap <strong>Add Book</strong> to import a .txt file, paste HTML, write page-by-page, or build a manga from image folders. No fake books—only what you create.</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "book-grid";
+
+      filtered.forEach(book => {
+        const card = document.createElement("div");
+        card.className = "book-card";
+
+        const thumb = document.createElement("div");
+        thumb.className = "book-thumb";
+        if (book.thumbnail) {
+          const img = document.createElement("img");
+          img.src = book.thumbnail;
+          img.alt = book.title;
+          thumb.appendChild(img);
+        }
+
+        const typePill = document.createElement("div");
+        typePill.className = "book-type-pill";
+        typePill.textContent = book.type === "manga" ? "Manga / Comic" : "Story / Text";
+        thumb.appendChild(typePill);
+
+        const tagsWrap = document.createElement("div");
+        tagsWrap.className = "book-tags";
+        (book.tags || []).slice(0, 3).forEach(tag => {
+          const chip = document.createElement("span");
+          chip.className = "tag-chip";
+          chip.textContent = tag;
+          tagsWrap.appendChild(chip);
+        });
+        thumb.appendChild(tagsWrap);
+
+        card.appendChild(thumb);
+
+        const meta = document.createElement("div");
+        meta.className = "book-meta";
+
+        const titleEl = document.createElement("h3");
+        titleEl.className = "book-title";
+        titleEl.textContent = book.title;
+        meta.appendChild(titleEl);
+
+        const sub = document.createElement("div");
+        sub.className = "book-sub";
+        let subParts = [];
+        if (book.author) subParts.push(book.author);
+        if (book.seriesName) {
+          let s = book.seriesName;
+          if (book.volumeNumber) s += " · Vol. " + book.volumeNumber;
+          subParts.push(s);
+        }
+        sub.textContent = subParts.join(" • ");
+        meta.appendChild(sub);
+
+        const stats = document.createElement("div");
+        stats.className = "book-stats";
+
+        const statViews = document.createElement("div");
+        statViews.className = "book-stat-pill";
+        statViews.innerHTML = `<span>👁️</span><span>${book.stats?.views || 0}</span>`;
+        const statLikes = document.createElement("div");
+        statLikes.className = "book-stat-pill";
+        statLikes.innerHTML = `<span>❤️</span><span>${book.stats?.likes || 0}</span>`;
+        stats.appendChild(statViews);
+        stats.appendChild(statLikes);
+
+        meta.appendChild(stats);
+
+        const actions = document.createElement("div");
+        actions.className = "book-actions";
+        const btnRead = document.createElement("button");
+        btnRead.textContent = "Read";
+        btnRead.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openReader(book.id);
+        });
+        const btnEdit = document.createElement("button");
+        btnEdit.textContent = "Edit";
+        btnEdit.addEventListener("click", (e) => {
+          e.stopPropagation();
+          loadBookIntoEditor(book.id);
+        });
+        actions.appendChild(btnRead);
+        actions.appendChild(btnEdit);
+        meta.appendChild(actions);
+
+        card.appendChild(meta);
+
+        card.addEventListener("click", () => openReader(book.id));
+
+        grid.appendChild(card);
+      });
+
+      libraryContent.innerHTML = "";
+      libraryContent.appendChild(grid);
+    }
+
+    function loadBookIntoEditor(bookId) {
+      const book = appState.books.find(b => b.id === bookId);
+      if (!book) return;
+      editingBookId = bookId;
+
+      if (book.type === "manga") {
+        bookTypeToggle.querySelectorAll("button").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.type === "manga");
+        });
+      } else {
+        bookTypeToggle.querySelectorAll("button").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.type === "text");
+        });
+      }
+
+      inputModeToggle.querySelectorAll("button").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      if (book.type === "text") {
+        const editorBtn = inputModeToggle.querySelector("button[data-mode='editor']");
+        editorBtn.classList.add("active");
+      } else {
+        const txtBtn = inputModeToggle.querySelector("button[data-mode='txt']");
+        txtBtn.classList.add("active");
+      }
+      updateInputModeVisibility();
+
+      bookTitleInput.value = book.title;
+      bookAuthorInput.value = book.author || "";
+      bookPublisherInput.value = book.publisher || "";
+      bookPubDateInput.value = book.pubDate || "";
+      bookCopyrightInput.value = book.copyright || "";
+      seriesNameInput.value = book.seriesName || "";
+      volumeNumberInput.value = book.volumeNumber || "";
+
+      if (book.type === "text") {
+        editorPages = (book.pages && book.pages.length) ? [...book.pages] : ["<p></p>"];
+        currentPageIndex = 0;
+        updatePageList();
+        renderCurrentPageToEditor();
+      } else {
+        editorPages = ["<p>(Manga pages are defined by the image folder.)</p>"];
+        currentPageIndex = 0;
+        updatePageList();
+        renderCurrentPageToEditor();
+      }
+
+      setEditorStatus("Editing existing book.");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }
+
+    function openReader(bookId) {
+      const book = appState.books.find(b => b.id === bookId);
+      if (!book) return;
+
+      readerBookId = bookId;
+      readerPageIndex = 0;
+      readerHasCountedView = false;
+
+      readerTitle.textContent = book.title;
+      let subParts = [];
+      if (book.author) subParts.push(book.author);
+      if (book.seriesName) {
+        let s = book.seriesName;
+        if (book.volumeNumber) s += " · Vol. " + book.volumeNumber;
+        subParts.push(s);
+      }
+      readerSub.textContent = subParts.join(" • ") || (book.type === "manga" ? "Manga / Comic" : "Story / Text");
+
+      const metaParts = [];
+      if (book.publisher) metaParts.push("Publisher: " + book.publisher);
+      if (book.pubDate) metaParts.push("Published: " + book.pubDate);
+      if (book.copyright) metaParts.push(book.copyright);
+      readerMeta.textContent = metaParts.join(" • ");
+
+      if (!readerHasCountedView) {
+        book.stats.views = (book.stats.views || 0) + 1;
+        book.updatedAt = Date.now();
+        readerHasCountedView = true;
+        updateTagsForBook(book);
+        saveState();
+      }
+
+      readerViewCount.textContent = book.stats.views || 0;
+      readerLikeCount.textContent = book.stats.likes || 0;
+      if (book.stats.liked) {
+        readerLikeBtn.classList.add("liked");
+        likeBtnLabel.textContent = "Liked";
+        readerLikeBtn.firstElementChild.textContent = "💖";
+      } else {
+        readerLikeBtn.classList.remove("liked");
+        likeBtnLabel.textContent = "Like this";
+        readerLikeBtn.firstElementChild.textContent = "🤍";
+      }
+
+      renderReaderTags(book);
+      renderReaderPage(true);
+      renderComments(book);
+      readerOverlay.classList.add("visible");
+    }
+
+    function renderReaderTags(book) {
+      readerTags.innerHTML = "";
+      (book.tags || []).forEach(tag => {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        chip.textContent = tag;
+        readerTags.appendChild(chip);
+      });
+    }
+
+    function renderReaderPage(withAnimation) {
+      const book = appState.books.find(b => b.id === readerBookId);
+      if (!book) return;
+      const totalPages = book.type === "manga" ? (book.images?.length || 1) : (book.pages?.length || 1);
+
+      if (readerPageIndex < 0) readerPageIndex = 0;
+      if (readerPageIndex >= totalPages) readerPageIndex = totalPages - 1;
+      readerPageIndicator.textContent = `Page ${readerPageIndex + 1} / ${totalPages}`;
+
+      if (book.type === "manga") {
+        readerTextPage.style.display = "none";
+        readerMangaPage.style.display = "flex";
+        const page = book.images[readerPageIndex];
+        readerMangaImg.src = page ? page.dataUrl : "";
+        if (withAnimation) {
+          readerMangaImg.classList.remove("page-fade");
+          void readerMangaImg.offsetWidth;
+          readerMangaImg.classList.add("page-fade");
+        }
+      } else {
+        readerTextPage.style.display = "block";
+        readerMangaPage.style.display = "none";
+        const html = book.pages[readerPageIndex] || "<p>(Empty page)</p>";
+        readerTextPage.innerHTML = html;
+        if (withAnimation) {
+          readerTextPage.classList.remove("page-fade");
+          void readerTextPage.offsetWidth;
+          readerTextPage.classList.add("page-fade");
+        }
+      }
+    }
+
+    prevPageBtn.addEventListener("click", () => {
+      readerPageIndex--;
+      renderReaderPage(true);
+    });
+    nextPageBtn.addEventListener("click", () => {
+      readerPageIndex++;
+      renderReaderPage(true);
+    });
+
+    readerCloseBtn.addEventListener("click", () => {
+      readerOverlay.classList.remove("visible");
+      readerBookId = null;
+    });
+    readerOverlay.addEventListener("click", (e) => {
+      if (e.target === readerOverlay) {
+        readerOverlay.classList.remove("visible");
+        readerBookId = null;
+      }
+    });
+
+    readerLikeBtn.addEventListener("click", () => {
+      const book = appState.books.find(b => b.id === readerBookId);
+      if (!book) return;
+      if (book.stats.liked) {
+        book.stats.liked = false;
+        book.stats.likes = Math.max(0, (book.stats.likes || 0) - 1);
+      } else {
+        book.stats.liked = true;
+        book.stats.likes = (book.stats.likes || 0) + 1;
+      }
+      book.updatedAt = Date.now();
+      updateTagsForBook(book);
+      readerLikeCount.textContent = book.stats.likes || 0;
+      if (book.stats.liked) {
+        readerLikeBtn.classList.add("liked");
+        likeBtnLabel.textContent = "Liked";
+        readerLikeBtn.firstElementChild.textContent = "💖";
+      } else {
+        readerLikeBtn.classList.remove("liked");
+        likeBtnLabel.textContent = "Like this";
+        readerLikeBtn.firstElementChild.textContent = "🤍";
+      }
+      saveState();
+      renderLibrary();
+      renderReaderTags(book);
+    });
+
+    function renderComments(book) {
+      commentList.innerHTML = "";
+      if (!book.comments || !book.comments.length) {
+        const div = document.createElement("div");
+        div.className = "comment-item";
+        div.innerHTML = `<div class="comment-text">No comments yet. Be the first to leave a thought after reading!</div>`;
+        commentList.appendChild(div);
+        return;
+      }
+      book.comments.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "comment-item";
+        const meta = document.createElement("div");
+        meta.className = "comment-meta";
+        const left = document.createElement("span");
+        left.innerHTML = `<strong>${c.author || "Reader"}</strong>`;
+        const date = new Date(c.createdAt || Date.now());
+        const right = document.createElement("span");
+        right.textContent = date.toLocaleDateString();
+        meta.appendChild(left);
+        meta.appendChild(right);
+        const text = document.createElement("div");
+        text.className = "comment-text";
+        text.textContent = c.text;
+        div.appendChild(meta);
+        div.appendChild(text);
+        commentList.appendChild(div);
+      });
+      commentList.scrollTop = commentList.scrollHeight;
+    }
+
+    commentForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const book = appState.books.find(b => b.id === readerBookId);
+      if (!book) return;
+      const text = commentTextInput.value.trim();
+      if (!text) return;
+      const author = commentAuthorInput.value.trim();
+      const comment = {
+        id: "c_" + Math.random().toString(36).slice(2),
+        author: author || "You",
+        text,
+        createdAt: Date.now()
+      };
+      book.comments = book.comments || [];
+      book.comments.push(comment);
+      book.updatedAt = Date.now();
+      saveState();
+      renderComments(book);
+      commentTextInput.value = "";
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!readerBookId) return;
+      if (e.key === "ArrowLeft") {
+        readerPageIndex--;
+        renderReaderPage(true);
+      } else if (e.key === "ArrowRight") {
+        readerPageIndex++;
+        renderReaderPage(true);
+      } else if (e.key === "Escape") {
+        readerOverlay.classList.remove("visible");
+        readerBookId = null;
+      }
+    });
+
+    resetEditor();
+    renderLibrary();
+  </script>
+</body>
+</html>
